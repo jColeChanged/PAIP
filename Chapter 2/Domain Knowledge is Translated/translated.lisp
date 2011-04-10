@@ -1,3 +1,5 @@
+;; Includes solution to excercise2-1
+
 (defun Adj* ()
   (if (= (random 2))
       nil

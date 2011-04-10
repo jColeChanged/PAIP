@@ -57,3 +57,12 @@
   (if (null the-list)
       nil
       (append (funcall fn (first the-list)) (mappend fn (rest the-list)))))
+
+(defun generate-tree (phrase)
+  "Generate a random sentence or phrase with a complete parse tree."
+  (cond ((lisp phrase)
+	 (mapcar #'generate-tree phrase))
+	((rewrites phrase)
+	 (cons phrase
+	       (generate-tree (random-elt (rewrites phrase)))))
+	(t (list phrase))))
