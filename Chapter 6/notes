@@ -1,0 +1,54 @@
+#Chapter 6 Building Software Tools#
+
+##6.1 An Interactive Interpreter##
+
+Eliza is an example of REPL. So are the interpreters of most programming languages. Even console applications have a similar architecture. Norvig makes the point that this general concept of a REPL can be abstracted. Instead of just writing the loop and modifying it as necessary for each instance of a REPL, a higher-order function can be created.
+
+He gives the following example of the abstraction.
+
+(defun interactive-interpreter (prompt transformer)
+  "Read an expression, transform it, and return the result."
+  (loop
+    (print prompt)
+    (print (funcall transformer (read)))))
+
+Then shows how it can be used to implement a LISP REPL and an Eliza REPL:
+
+(defun lisp ()
+  (interactive-interpreter '> #'eval))
+
+(defun eliza ()
+  (interactive-interpreter 'eliza>
+    #'(lambda (x) (flatten (use-eliza-rules x)))))
+
+In addition he introduces the compose function. A function which I've come to love through using Clojure. He uses this function to simplify the implementation of eliza even further.
+
+(defun compose (f g)
+  "Return the function that computes (f (g x))"
+  #'(lambda (x) (funcall f (funcall g x))))
+
+(defun eliza ()
+  (interactive-interpreter 'eliza>
+    (compose #'flatten #'use-eliza-rules)))
+
+After introducing these concepts he moves on to the costs and benefits of using a higher-order function to abstract in this particular case. In simple cases like a REPL abstracting away the loop can make things harder to read. Instead of just looking at the code one has to also go and find the higher-order function that the code makes use of. Unless, of course, they are already familiar with that particular higher-order function. The benefit on the other hand is that maintenance becomes easier. If you wanted to add additional features into every REPL, it would be possible to do so from the higher-order function and every instance of a REPL would benefit from the improvements.
+
+The example that pops into my mind when I'm thinking about the benefits of this approach, besides the similarity to the objectives behind encapsulation in object oriented programming (and the similarity between inheritance and higher-order functions) is of a REPL which isn't used from a command line. What if one day you decided that you wanted to work with all your REPL tools built over the years via a web based console. With the interactive interpreter, I could imagine doing all the work of setting up a web server happening in the background. The code wouldn't need to be rendered unintelligent by the fact that the implementation will be web based. There would be a lot more complexity in the higher-order functions for it to be feasible, but it would be one function which would be changed. Not fifty implementations of the function.
+
+Norvig gives a different example though. He shows how the abstraction can be used to implement a prompt which will give information about errors. Among other things...:
+
+(defun interactive-interpreter (prompt transformer)
+  "Read an expression, transform it, and print the result"
+  (loop
+    (handler-case
+      (progn
+        (if (stringp prompt)
+	  (print prompt)
+	  (funcall prompt))
+	(print (funcall transformer (read))))
+    (error (condition)
+      (format t "~&;; Error ~a ignored. back to top level." condition)))))
+
+(defun prompt-generator (&optional (num 0) (ctl-string "[~d] "))
+  "Returns a function that prints prompt like [1], [2], etc."
+  #'(lambda () (format t ctl-string (incf num))))
