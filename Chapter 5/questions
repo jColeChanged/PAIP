@@ -1,0 +1,12 @@
+5.2
+
+Eliza fails when given input which does not have a pattern associated with it. This problem can be solved by adding a rule for cases which match no pattern and/or by adding additional rules so that getting something with no matching pattern is a rarer occurence.
+
+Eliza also fails by being inconsistent with its use of punctuation. Because ? is used to describe a variable, it can't be placed at the end of a pattern which matches a variable without being made a part of the variable. To solve this issue variable names should have some method of specifying both when they start and when they end. That way responses could match while still having other characters be on the same line. There would also need to be escape characters.
+
+The lack of understanding of context and past conversation is a failing that happens due to the nature of Eliza. A different chat bot would need to be created to come closer to solving problems of this nature.
+
+5.3: Trivial even though its called hard. Skipping. I get how to make rules for Eliza.
+
+5.5: I ended up doing this excersise when I converted the program to Clojure.
+
