@@ -1,0 +1,3 @@
+The function cons can be thought of as a special case of one of the other functions listed previously. Which one?
+
+The cons function can be thought of as a special case of the list* function whenever the list function is given only two arguments.
