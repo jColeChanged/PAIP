@@ -114,30 +114,47 @@
 (defun rule-pattern (rule) (first rule))
 (defun rule-responses (rule) (rest rule))
 
+;; Abbrv facilities... making patterns more readable through transformation
+(defun pat-match-abbrev (symbol expansion)
+  "Define symbol as a macro standing for a pat-match pattern."
+  (setf (get symbol 'expand-pat-match-abbrev)
+	(expand-pat-match-abbrev expansion)))
+
+(defun expand-pat-match-abbrev (pat)
+  "Expand out all pattern matching abbreviations in pat."
+  (cond ((and (symbolp pat) (get pat 'expand-pat-match-abbrev)))
+	((atom pat) pat)
+	(t (cons (expand-pat-match-abbrev (first pat))
+		 (expand-pat-match-abbrev (rest pat))))))
+
+(pat-match-abbrev '?*x '(?* ?x))
+(pat-match-abbrev '?*y '(?* ?y))
+
 (defparameter *eliza-rules*
-  '((((?* ?X) hello (?* ?y))
+  '(((?*x hello ?*y)
       (How do you do. Please state your problem.))
-    (((?* ?x) I want (?* ?y))
+    ((?*x I want ?*y)
      (What would it mean if you got ?y)
      (Why do you want ?y)
      (Suppose you got ?y soon))
-    (((?* ?x) if (?* ?y))
+    ((?*x if ?*y)
      (Do you really thinks its likely that ?y)
      (Do you wish that ?y)
      (What would you think about ?y)
      (Really-- if ?y))
-    (((?* ?x) no (?* ?y))
+    ((?*x no ?*y)
      (Why not?)
      (You are being a bit negative)
      (Are you saying "NO" just to be negative?))
-    (((?* ?x) I was (?* ?y))
+    ((?*x I was ?*y)
      (Were you really?)
      (Perhaps I already knew you were ?y)
      (Why do you tell me you were ?y now?))
-    (((?* ?x) I feel (?* ?y))
+    ((?*x I feel ?*y)
      (Do you often feel ?y ?))
-    (((?* ?x) I felt (?* ?y))
+    ((?*x I felt ?*y)
      (What other feelings do you have?))))
+(setf *eliza-rules* (mapcar #'expand-pat-match-abbrev *eliza-rules*))
 
 (defun eliza ()
   "Responds to user input using patter matching rules."

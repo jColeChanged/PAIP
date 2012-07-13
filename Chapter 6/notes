@@ -6,30 +6,30 @@ Eliza is an example of REPL. So are the interpreters of most programming languag
 
 He gives the following example of the abstraction.
 
-(defun interactive-interpreter (prompt transformer)
-  "Read an expression, transform it, and return the result."
-  (loop
-    (print prompt)
-    (print (funcall transformer (read)))))
+    (defun interactive-interpreter (prompt transformer)
+      "Read an expression, transform it, and return the result."
+      (loop
+        (print prompt)
+        (print (funcall transformer (read)))))
 
 Then shows how it can be used to implement a LISP REPL and an Eliza REPL:
 
-(defun lisp ()
-  (interactive-interpreter '> #'eval))
+    (defun lisp ()
+      (interactive-interpreter '> #'eval))
 
-(defun eliza ()
-  (interactive-interpreter 'eliza>
-    #'(lambda (x) (flatten (use-eliza-rules x)))))
+    (defun eliza ()
+      (interactive-interpreter 'eliza>
+        #'(lambda (x) (flatten (use-eliza-rules x)))))
 
 In addition he introduces the compose function. A function which I've come to love through using Clojure. He uses this function to simplify the implementation of eliza even further.
 
-(defun compose (f g)
-  "Return the function that computes (f (g x))"
-  #'(lambda (x) (funcall f (funcall g x))))
+    (defun compose (f g)
+      "Return the function that computes (f (g x))"
+      #'(lambda (x) (funcall f (funcall g x))))
 
-(defun eliza ()
-  (interactive-interpreter 'eliza>
-    (compose #'flatten #'use-eliza-rules)))
+    (defun eliza ()
+      (interactive-interpreter 'eliza>
+        (compose #'flatten #'use-eliza-rules)))
 
 After introducing these concepts he moves on to the costs and benefits of using a higher-order function to abstract in this particular case. In simple cases like a REPL abstracting away the loop can make things harder to read. Instead of just looking at the code one has to also go and find the higher-order function that the code makes use of. Unless, of course, they are already familiar with that particular higher-order function. The benefit on the other hand is that maintenance becomes easier. If you wanted to add additional features into every REPL, it would be possible to do so from the higher-order function and every instance of a REPL would benefit from the improvements.
 
@@ -37,18 +37,71 @@ The example that pops into my mind when I'm thinking about the benefits of this 
 
 Norvig gives a different example though. He shows how the abstraction can be used to implement a prompt which will give information about errors. Among other things...:
 
-(defun interactive-interpreter (prompt transformer)
-  "Read an expression, transform it, and print the result"
-  (loop
-    (handler-case
-      (progn
-        (if (stringp prompt)
-	  (print prompt)
-	  (funcall prompt))
-	(print (funcall transformer (read))))
-    (error (condition)
-      (format t "~&;; Error ~a ignored. back to top level." condition)))))
+    (defun interactive-interpreter (prompt transformer)
+      "Read an expression, transform it, and print the result"
+      (loop
+        (handler-case
+          (progn
+            (if (stringp prompt)
+	      (print prompt)
+	      (funcall prompt))
+	    (print (funcall transformer (read))))
+        (error (condition)
+          (format t "~&;; Error ~a ignored. back to top level." condition)))))
 
-(defun prompt-generator (&optional (num 0) (ctl-string "[~d] "))
-  "Returns a function that prints prompt like [1], [2], etc."
-  #'(lambda () (format t ctl-string (incf num))))
+    (defun prompt-generator (&optional (num 0) (ctl-string "[~d] "))
+      "Returns a function that prints prompt like [1], [2], etc."
+      #'(lambda () (format t ctl-string (incf num))))
+
+##6.2 A Pattern-Matching Tool##
+
+When covering how to go about generalizing a pattern matching tool like the one used by Eliza Norvig details his logic in saying that there should be cases for zero or more, one or more, zero, one, and n to m elements. To quote him he says:
+
+> These ideas come from ... regular expressions, as well as very general heuristics for generalization, such as "consider imoprtant special cases" and "zero and one are likely to be important special cases." -- Norvig in PAIP, pg. 179
+
+In addition he proposes the use of predicate functions within patterns. Not only would the match have the ability to look at the string it was matching against, but it could pass the token under consideration to something like, is-odd?, to determine whether it should match as well.
+
+It just occured to me that the syntax being used is similar to the syntax seen in Enlive. Using functions means encasing the part that needs to use a function within a list... its a small thing to note I guess. I suppose it has to be this way since what exactly the function needs to apply to must be explicit. 
+
+###Data Driven Programming###
+
+When going over programming an extensible segment matcher Norvig covers a programming paradigm called data driven programming. The idea behind the approach is that a function can decide what to do using supplied data instead of having to have a function hard coded for that particular task. When I began to think of IRC bots, one of the few programs I've contributed to which was designed in a modular manner, I realized that a bot which supports plugins would likely benefit from a data driven approach. Each bot plugin could be thought of as an entry in the table. Associated with the bot would be a string of characters the bot is interested in. When reading input, the bot would check for the starting string in the table. If it found it, it would then send the rest of the input to the function! Of course, other approaches might work better. Its just an option.
+
+##6.3 A Rule-Based Translator##
+
+(defun rule-based-translator (input rules &key (matcher #'pat-match) 
+  (rule-if #'first) (rule-then #'rest) (action #'sublis))
+  "Find the first rule in rules that matches input."
+  (some #'(lambda (rule)
+  	    (let ((result (funcall matcher (funcall rule-if rule) input)))
+	      (if (not (eq result fail))
+	        (funcall action result (funcall rule-then rule) rules))))
+    rules)
+
+
+##6.4 A Set of Searching Tools##
+
+Search problems are called nondeterministic because there is no way to determine what the best next step is. Also AI problems tend to be nondeterminstic.
+
+I can't stress enough how intuitive and yet underused the search function that Norig defines really is. Usually when I've worked with search functions they have searched through trees. Norvig's search function also searches through trees. The difference is that it does so while making heavy use of higher order functions.
+
+A consequence of this abstraction is that the solution takes a different form than that of past searches I've worked with. They were always implemented via recursion, because it is such a natural way to work with a tree with their being defined recursively through their nature. A tree is in many ways a collection of smaller trees in the same way that a list is a collection of smaller lists.
+
+The difference in approach is that the recursion is pulled out. The search uses looping instead of recursion. Only one state is examined at a time. A list is maintained that is looped through. With each iteration the list has new edge nodes added to it and then a search strategy is applied to it.
+
+Sometimes. So if I gave a search stategy function like this:
+
+(lambda (x)
+  (lambda (coll) 
+    (if (< (first coll) x)
+    	(list (first coll))
+	(list (second coll)))))
+
+I would have a search function which implemented a binary search. Or something close to it at the least. I would only need to handle the edge case in which there is nothign left to search.
+
+Its so intuitive on so many levels. I'm so shocked that nobody has ever presented searching like this before. I think the reason I never was shown this approach was because a book on data structures has an inherently differnet view of programming. The tree class is in charge of searching a tree. It has ways to search itself...
+
+searching isn't its own thing.
+
+I guess how you think about programming really does matter in terms of what sort of program is produced. What are the benefits of not having the tree class be in charge of everything? Polymorphism is one benefit, but that problem is soluble to other approaches. Still.. that generalization is pretty cool. 
+  	  	 
