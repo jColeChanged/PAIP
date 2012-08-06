@@ -36,34 +36,34 @@
 (defconstant fail nil)
 
 (defun graph-search (states goal-p successors combiner
-		     &optional (state= #'eql) (old-states (make-hash-table)))
-  "Find a state that satisifies goal-p. Start with states and search according
-  to successors and combiner. Don't try the same state twice."
+                     &optional (state= #'eql) 
+		               (old-states (make-hash-table :test state=))) 
+  "Find a state that satisfies goal-p.  Start with states,
+  and search according to successors and combiner.  
+  Don't try the same state twice."
   (print states)
   (cond ((null states) fail)
-	((funcall goal-p (first states)) (first states))
-	(t (setf (gethash (first states) old-states) t) 
+        ((funcall goal-p (first states)) (first states))
+        (t (setf (gethash (first states) old-states) (first states))
 	   (graph-search
-	    (funcall combiner
-		     (new-states states successors old-states state=)
-		     (rest states))
-	    goal-p successors combiner state= old-states))))
+	    (funcall
+	     combiner
+	     (new-states states successors state= old-states)
+	     (rest states))
+	    goal-p successors combiner state=
+	    old-states))))
 
-;;(defun new-states (states successors state= old-states)
-;;  "Generate successor states that have not been seen before."
-;;  (remove-if
-;;   #'(lambda (state)
-;;       (or (member state states :test state=)
-;;	   (member state old-states :test state=)))
-;;   (funcall successors (first states))))
+(defun new-states (states successors state= old-states)
+  "Generate successor states that have not been seen before."
+  (remove-if
+    #'(lambda (state)
+        (or (member state states :test state=)
+            (gethash state old-states)))
+    (funcall successors (first states))))
+
+(defun next2 (x) (list (+ x 1) (+ x 2)))
 
 (defun prepend (lone ltwo)
   (append ltwo lone))
-
-(defun new-states (states successors old-states state=)
-  (remove-if
-   #'(lambda (state) (or (gethash state old-states)
-			 (member state states :test state=)))
-   (funcall successors (first states))))
 
 (defun next2 (x) (list (+ x 1) (+ x 2)))
